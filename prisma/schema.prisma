@@ -32,23 +32,23 @@ enum Platform {
 }
 
 model User {
-  id             String          @id @default(cuid())
-  name           String?
-  email          String?         @unique
-  image          String?
-  passwordHash   String?
-  role           Role            @default(USER)
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  favorites      Favorite[]
-  collections    Collection[]
-  bundles        Bundle[]
-  reviews        Review[]
-  installed      InstalledApp[]
-  notifications  Notification[]
-  settings       UserSettings?
-  accounts       Account[]
-  sessions       Session[]
+  id            String         @id @default(cuid())
+  name          String?
+  email         String?        @unique
+  image         String?
+  passwordHash  String?
+  role          Role           @default(USER)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  favorites     Favorite[]
+  collections   Collection[]
+  bundles       Bundle[]
+  reviews       Review[]
+  installed     InstalledApp[]
+  notifications Notification[]
+  settings      UserSettings?
+  accounts      Account[]
+  sessions      Session[]
 }
 
 model Publisher {
@@ -91,6 +91,7 @@ model Application {
   bundleItems     BundleItem[]
   collectionItems CollectionItem[]
   downloads       Download[]
+  installerItems  InstallerItem[]
   createdAt       DateTime              @default(now())
   updatedAt       DateTime              @updatedAt
 
@@ -99,23 +100,23 @@ model Application {
 }
 
 model ApplicationVersion {
-  id               String             @id @default(cuid())
-  applicationId    String
-  application      Application        @relation(fields: [applicationId], references: [id], onDelete: Cascade)
-  version          String
-  releaseDate      DateTime
-  fileSize         BigInt?
-  architecture     Architecture
-  platform         Platform
-  downloadUrl      String?
-  checksum         String?
-  signature        String?
-  verified         Boolean            @default(false)
-  current          Boolean            @default(false)
-  releaseNotes     String?
-  securityChecks   SecurityCheck[]
-  installerItems   InstallerItem[]
-  createdAt        DateTime           @default(now())
+  id             String              @id @default(cuid())
+  applicationId  String
+  application    Application         @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  version        String
+  releaseDate    DateTime
+  fileSize       BigInt?
+  architecture   Architecture
+  platform       Platform
+  downloadUrl    String?
+  checksum       String?
+  signature      String?
+  verified       Boolean             @default(false)
+  current        Boolean             @default(false)
+  releaseNotes   String?
+  securityChecks SecurityCheck[]
+  installerItems InstallerItem[]
+  createdAt      DateTime            @default(now())
 
   @@unique([applicationId, version, architecture, platform])
   @@index([applicationId, current])
@@ -234,14 +235,14 @@ model Notification {
 }
 
 model SecurityCheck {
-  id                  String             @id @default(cuid())
+  id                   String             @id @default(cuid())
   applicationVersionId String
-  source              String
-  signatureVerified   Boolean            @default(false)
-  hashVerified        Boolean            @default(false)
-  checkedAt           DateTime           @default(now())
-  notes               String?
-  version             ApplicationVersion @relation(fields: [applicationVersionId], references: [id], onDelete: Cascade)
+  source               String
+  signatureVerified    Boolean            @default(false)
+  hashVerified         Boolean            @default(false)
+  checkedAt            DateTime           @default(now())
+  notes                String?
+  version              ApplicationVersion @relation(fields: [applicationVersionId], references: [id], onDelete: Cascade)
 
   @@index([applicationVersionId])
 }
@@ -257,18 +258,18 @@ model Download {
 }
 
 model Installer {
-  id        String         @id @default(cuid())
-  token     String         @unique
+  id         String         @id @default(cuid())
+  token      String         @unique
   configHash String
-  expiresAt DateTime
-  createdAt DateTime       @default(now())
-  items     InstallerItem[]
+  expiresAt  DateTime
+  createdAt  DateTime       @default(now())
+  items      InstallerItem[]
 }
 
 model InstallerItem {
   installerId  String
   applicationId String
-  versionId    String
+  versionId     String
   position     Int               @default(0)
   installer    Installer         @relation(fields: [installerId], references: [id], onDelete: Cascade)
   application  Application       @relation(fields: [applicationId], references: [id])
