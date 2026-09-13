@@ -24,7 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </Link>
               <nav className="links" aria-label="Primary navigation">
                 <Link href="/help">Help</Link>
-                <a href="mailto:feedback@example.com">Feedback</a>
+                <a href="https://github.com/nived938/ninite.com/issues/new" target="_blank" rel="noreferrer">Feedback</a>
                 <Link href="/pro" className="proLink">Ninite Pro <span>FREE</span></Link>
               </nav>
             </div>
@@ -45,7 +45,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <div>
                 <h4>Help</h4>
                 <Link href="/help">Help center</Link>
-                <a href="mailto:feedback@example.com">Feedback</a>
+                <a href="https://github.com/nived938/ninite.com/issues/new" target="_blank" rel="noreferrer">Feedback</a>
               </div>
               <div>
                 <h4>About</h4>
