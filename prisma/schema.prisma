@@ -1,29 +1,310 @@
-generator client { provider = "prisma-client-js" }
-datasource db { provider = "postgresql" url = env("DATABASE_URL") }
+generator client {
+  provider = "prisma-client-js"
+}
 
-model User { id String @id @default(cuid()) name String? email String? @unique image String? passwordHash String? role Role @default(USER) createdAt DateTime @default(now()) updatedAt DateTime @updatedAt favorites Favorite[] collections Collection[] bundles Bundle[] reviews Review[] installed InstalledApp[] notifications Notification[] settings UserSettings? accounts Account[] sessions Session[] }
-enum Role { USER ADMIN }
-model Publisher { id String @id @default(cuid()) name String @unique website String description String? verified Boolean @default(false) apps Application[] }
-model Category { id String @id @default(cuid()) name String @unique slug String @unique description String? apps ApplicationCategory[] }
-model Application { id String @id @default(cuid()) slug String @unique name String description String iconUrl String? websiteUrl String sourceUrl String? license License @default(FREE) openSource Boolean @default(false) portable Boolean @default(false) featured Boolean @default(false) active Boolean @default(true) publisherId String publisher Publisher @relation(fields:[publisherId],references:[id]) versions ApplicationVersion[] categories ApplicationCategory[] favorites Favorite[] reviews Review[] installed InstalledApp[] bundleItems BundleItem[] collectionItems CollectionItem[] downloads Download[] createdAt DateTime @default(now()) updatedAt DateTime @updatedAt @@index([name]) @@index([publisherId]) }
-enum License { FREE PAID FREEMIUM OPEN_SOURCE }
-enum Architecture { X86 X64 ARM64 UNIVERSAL }
-enum Platform { WINDOWS_10 WINDOWS_11 }
-model ApplicationVersion { id String @id @default(cuid()) applicationId String application Application @relation(fields:[applicationId],references:[id],onDelete:Cascade) version String releaseDate DateTime fileSize BigInt? architecture Architecture platform Platform downloadUrl String? checksum String? signature String? verified Boolean @default(false) current Boolean @default(false) releaseNotes String? securityChecks SecurityCheck[] installerItems InstallerItem[] createdAt DateTime @default(now()) @@unique([applicationId,version,architecture,platform]) @@index([applicationId,current]) }
-model ApplicationCategory { applicationId String categoryId String application Application @relation(fields:[applicationId],references:[id],onDelete:Cascade) category Category @relation(fields:[categoryId],references:[id],onDelete:Cascade) @@id([applicationId,categoryId]) }
-model Favorite { userId String applicationId String createdAt DateTime @default(now()) user User @relation(fields:[userId],references:[id],onDelete:Cascade) application Application @relation(fields:[applicationId],references:[id],onDelete:Cascade) @@id([userId,applicationId]) }
-model Bundle { id String @id @default(cuid()) slug String @unique name String description String? public Boolean @default(false) userId String? user User? @relation(fields:[userId],references:[id],onDelete:SetNull) items BundleItem[] createdAt DateTime @default(now()) updatedAt DateTime @updatedAt }
-model BundleItem { bundleId String applicationId String position Int @default(0) bundle Bundle @relation(fields:[bundleId],references:[id],onDelete:Cascade) application Application @relation(fields:[applicationId],references:[id],onDelete:Cascade) @@id([bundleId,applicationId]) }
-model Collection { id String @id @default(cuid()) name String description String? userId String user User @relation(fields:[userId],references:[id],onDelete:Cascade) items CollectionItem[] createdAt DateTime @default(now()) updatedAt DateTime @updatedAt }
-model CollectionItem { collectionId String applicationId String position Int @default(0) collection Collection @relation(fields:[collectionId],references:[id],onDelete:Cascade) application Application @relation(fields:[applicationId],references:[id],onDelete:Cascade) @@id([collectionId,applicationId]) }
-model InstalledApp { userId String applicationId String version String architecture Architecture detectedAt DateTime @default(now()) user User @relation(fields:[userId],references:[id],onDelete:Cascade) application Application @relation(fields:[applicationId],references:[id],onDelete:Cascade) @@id([userId,applicationId]) }
-model Review { id String @id @default(cuid()) userId String applicationId String rating Int title String? body String? helpful Int @default(0) approved Boolean @default(false) createdAt DateTime @default(now()) user User @relation(fields:[userId],references:[id],onDelete:Cascade) application Application @relation(fields:[applicationId],references:[id],onDelete:Cascade) @@unique([userId,applicationId]) }
-model UserSettings { userId String @id updateNotifications Boolean @default(true) securityNotifications Boolean @default(true) productNotifications Boolean @default(false) user User @relation(fields:[userId],references:[id],onDelete:Cascade) }
-model Notification { id String @id @default(cuid()) userId String type String title String body String read Boolean @default(false) createdAt DateTime @default(now()) user User @relation(fields:[userId],references:[id],onDelete:Cascade) @@index([userId,read]) }
-model SecurityCheck { id String @id @default(cuid()) applicationVersionId String source String signatureVerified Boolean @default(false) hashVerified Boolean @default(false) checkedAt DateTime @default(now()) notes String? version ApplicationVersion @relation(fields:[applicationVersionId],references:[id],onDelete:Cascade) @@index([applicationVersionId]) }
-model Download { id String @id @default(cuid()) applicationId String versionId String? userId String? status String createdAt DateTime @default(now()) application Application @relation(fields:[applicationId],references:[id]) }
-model Installer { id String @id @default(cuid()) token String @unique configHash String expiresAt DateTime createdAt DateTime @default(now()) items InstallerItem[] }
-model InstallerItem { installerId String applicationId String versionId String position Int @default(0) installer Installer @relation(fields:[installerId],references:[id],onDelete:Cascade) application Application @relation(fields:[applicationId],references:[id]) version ApplicationVersion @relation(fields:[versionId],references:[id]) @@id([installerId,applicationId]) }
-model Account { userId String type String provider String providerAccountId String refresh_token String? access_token String? expires_at Int? token_type String? scope String? id_token String? session_state String? user User @relation(fields:[userId],references:[id],onDelete:Cascade) @@id([provider,providerAccountId]) }
-model Session { sessionToken String @unique userId String expires DateTime user User @relation(fields:[userId],references:[id],onDelete:Cascade) }
-model VerificationToken { identifier String token String @unique expires DateTime @@unique([identifier,token]) }
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum License {
+  FREE
+  PAID
+  FREEMIUM
+  OPEN_SOURCE
+}
+
+enum Architecture {
+  X86
+  X64
+  ARM64
+  UNIVERSAL
+}
+
+enum Platform {
+  WINDOWS_10
+  WINDOWS_11
+}
+
+model User {
+  id             String          @id @default(cuid())
+  name           String?
+  email          String?         @unique
+  image          String?
+  passwordHash   String?
+  role           Role            @default(USER)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  favorites      Favorite[]
+  collections    Collection[]
+  bundles        Bundle[]
+  reviews        Review[]
+  installed      InstalledApp[]
+  notifications  Notification[]
+  settings       UserSettings?
+  accounts       Account[]
+  sessions       Session[]
+}
+
+model Publisher {
+  id          String        @id @default(cuid())
+  name        String        @unique
+  website     String
+  description String?
+  verified    Boolean       @default(false)
+  apps        Application[]
+}
+
+model Category {
+  id          String                @id @default(cuid())
+  name        String                @unique
+  slug        String                @unique
+  description String?
+  apps        ApplicationCategory[]
+}
+
+model Application {
+  id              String                @id @default(cuid())
+  slug            String                @unique
+  name            String
+  description     String
+  iconUrl         String?
+  websiteUrl      String
+  sourceUrl       String?
+  license         License               @default(FREE)
+  openSource      Boolean               @default(false)
+  portable        Boolean               @default(false)
+  featured        Boolean               @default(false)
+  active          Boolean               @default(true)
+  publisherId     String
+  publisher       Publisher             @relation(fields: [publisherId], references: [id])
+  versions        ApplicationVersion[]
+  categories      ApplicationCategory[]
+  favorites       Favorite[]
+  reviews         Review[]
+  installed       InstalledApp[]
+  bundleItems     BundleItem[]
+  collectionItems CollectionItem[]
+  downloads       Download[]
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  @@index([name])
+  @@index([publisherId])
+}
+
+model ApplicationVersion {
+  id               String             @id @default(cuid())
+  applicationId    String
+  application      Application        @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  version          String
+  releaseDate      DateTime
+  fileSize         BigInt?
+  architecture     Architecture
+  platform         Platform
+  downloadUrl      String?
+  checksum         String?
+  signature        String?
+  verified         Boolean            @default(false)
+  current          Boolean            @default(false)
+  releaseNotes     String?
+  securityChecks   SecurityCheck[]
+  installerItems   InstallerItem[]
+  createdAt        DateTime           @default(now())
+
+  @@unique([applicationId, version, architecture, platform])
+  @@index([applicationId, current])
+}
+
+model ApplicationCategory {
+  applicationId String
+  categoryId    String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  category      Category    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([applicationId, categoryId])
+}
+
+model Favorite {
+  userId        String
+  applicationId String
+  createdAt     DateTime    @default(now())
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@id([userId, applicationId])
+}
+
+model Bundle {
+  id          String       @id @default(cuid())
+  slug        String       @unique
+  name        String
+  description String?
+  public      Boolean      @default(false)
+  userId      String?
+  user        User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  items       BundleItem[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model BundleItem {
+  bundleId      String
+  applicationId String
+  position      Int         @default(0)
+  bundle        Bundle      @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@id([bundleId, applicationId])
+}
+
+model Collection {
+  id          String           @id @default(cuid())
+  name        String
+  description String?
+  userId      String
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items       CollectionItem[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model CollectionItem {
+  collectionId String
+  applicationId String
+  position     Int         @default(0)
+  collection   Collection  @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  application  Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@id([collectionId, applicationId])
+}
+
+model InstalledApp {
+  userId        String
+  applicationId String
+  version       String
+  architecture  Architecture
+  detectedAt    DateTime    @default(now())
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@id([userId, applicationId])
+}
+
+model Review {
+  id            String      @id @default(cuid())
+  userId        String
+  applicationId String
+  rating        Int
+  title         String?
+  body          String?
+  helpful       Int         @default(0)
+  approved      Boolean     @default(false)
+  createdAt     DateTime    @default(now())
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, applicationId])
+}
+
+model UserSettings {
+  userId                String @id
+  updateNotifications   Boolean @default(true)
+  securityNotifications Boolean @default(true)
+  productNotifications  Boolean @default(false)
+  user                  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String
+  title     String
+  body      String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+}
+
+model SecurityCheck {
+  id                  String             @id @default(cuid())
+  applicationVersionId String
+  source              String
+  signatureVerified   Boolean            @default(false)
+  hashVerified        Boolean            @default(false)
+  checkedAt           DateTime           @default(now())
+  notes               String?
+  version             ApplicationVersion @relation(fields: [applicationVersionId], references: [id], onDelete: Cascade)
+
+  @@index([applicationVersionId])
+}
+
+model Download {
+  id            String      @id @default(cuid())
+  applicationId String
+  versionId     String?
+  userId        String?
+  status        String
+  createdAt     DateTime    @default(now())
+  application   Application @relation(fields: [applicationId], references: [id])
+}
+
+model Installer {
+  id        String         @id @default(cuid())
+  token     String         @unique
+  configHash String
+  expiresAt DateTime
+  createdAt DateTime       @default(now())
+  items     InstallerItem[]
+}
+
+model InstallerItem {
+  installerId  String
+  applicationId String
+  versionId    String
+  position     Int               @default(0)
+  installer    Installer         @relation(fields: [installerId], references: [id], onDelete: Cascade)
+  application  Application       @relation(fields: [applicationId], references: [id])
+  version      ApplicationVersion @relation(fields: [versionId], references: [id])
+
+  @@id([installerId, applicationId])
+}
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+}
+
+model Session {
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
