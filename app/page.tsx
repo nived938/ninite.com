@@ -1,8 +1,72 @@
+import { db } from '@/lib/db'
+import { ensureCatalog } from '@/lib/catalog'
+import AppsBrowser from '@/components/AppsBrowser'
 import Link from 'next/link'
-import {db} from '@/lib/db'
-import {ensureCatalog} from '@/lib/catalog'
 
-export default async function Home(){
- await ensureCatalog()
- const [apps,categories,count]=await Promise.all([db.application.findMany({where:{active:true},include:{publisher:true,versions:{where:{current:true},take:1}},orderBy:[{featured:'desc'},{updatedAt:'desc'}],take:12}),db.category.findMany({orderBy:{name:'asc'},take:18}),db.application.count({where:{active:true}})])
- return <main><section className="hero"><div className="container"><div className="pill">{count}+ trusted Windows applications</div><h1>Install everything you need. In one place.</h1><p>Discover trusted Windows applications, select what you need, and build reusable setups. AppNest keeps software discovery, downloads and updates simple.</p><form className="search" action="/apps"><input name="q" aria-label="Search apps" placeholder="Search apps, publishers and tools..."/><button className="btn primary" type="submit">Search</button></form><div style={{display:'flex',gap:10,marginTop:14,flexWrap:'wrap'}}><Link className="btn secondary" href="/apps">Browse {count} apps</Link><Link className="btn ghost" href="/builder">Build an Installer</Link></div><div className="heroStats"><span><strong>{count}</strong> cataloged apps</span><span><strong>{categories.length}</strong> categories</span><span><strong>Official</strong> publisher sources</span></div></div></section><section className="section"><div className="container"><div className="sectionHeader"><div><h2>Popular right now</h2><p className="sub">A curated starting point, backed by publisher information.</p></div><Link href="/apps">View all →</Link></div><div className="grid">{apps.slice(0,6).map(a=><Link className="card appcard" key={a.id} href={'/apps/'+a.slug}><div className="icon appIcon">{a.iconUrl?<img src={a.iconUrl} alt="" width={42} height={42}/>:a.name.slice(0,1)}</div><div><h3>{a.name}</h3><p>{a.description}</p><div className="meta">{a.publisher.name} · {a.versions[0]?.version??'Official release'}</div></div></Link>)}</div></div></section><section className="section"><div className="container"><div className="sectionHeader"><div><h2>Browse categories</h2><p className="sub">From browsers and developer tools to media, privacy and AI.</p></div><Link href="/apps">Directory →</Link></div><div className="grid">{categories.map(c=><Link className="card" href={'/apps?category='+encodeURIComponent(c.slug)} key={c.id}><strong>{c.name}</strong><p className="muted">Explore trusted apps</p></Link>)}</div></div></section><section className="section"><div className="container"><div className="card" style={{padding:30,display:'flex',justifyContent:'space-between',gap:20,alignItems:'center',flexWrap:'wrap'}}><div><h2 style={{marginTop:0}}>Build your setup once</h2><p className="muted">Select apps, review the manifest and generate a signed configuration for the Windows client.</p></div><Link className="btn primary" href="/builder">Build an Installer</Link></div></div></section></main>}
+export default async function Home() {
+  await ensureCatalog()
+
+  const [apps, categories, count] = await Promise.all([
+    db.application.findMany({
+      where: { active: true },
+      include: { publisher: true, versions: { where: { current: true }, take: 1 }, categories: { include: { category: true } } },
+      orderBy: [{ featured: 'desc' }, { name: 'asc' }],
+    }),
+    db.category.findMany({ orderBy: { name: 'asc' } }),
+    db.application.count({ where: { active: true } }),
+  ])
+
+  const categoryCount = categories.filter(category => apps.some(app => app.categories.some(item => item.category.slug === category.slug))).length
+
+  return (
+    <main>
+      <section className="homepage-introduction">
+        <div className="container introGrid">
+          <div className="introMain">
+            <div className="eyebrow">Simple Windows software installation</div>
+            <h1>Install and Update All Your Programs at Once</h1>
+            <p className="introLead">No toolbars. No hunting for installers. No clicking through endless setup screens. Just pick your apps and build one clean installer.</p>
+            <div className="heroActions">
+              <a className="btn primary" href="#apps">Pick your apps ↓</a>
+              <Link className="btn ghost" href="/pro">Ninite Pro, free</Link>
+            </div>
+            <div className="trustLine"><span>✓ No account required</span><span>✓ Official publisher sources</span><span>✓ Free Pro features</span></div>
+          </div>
+
+          <div className="introColumn">
+            <h2>Always Up-to-date</h2>
+            <p>You don't have to keep checking software websites. The catalog is organized so you can quickly find the apps you need.</p>
+            <Link href="/apps" className="textLink">Browse all {count} apps →</Link>
+          </div>
+
+          <div className="introColumn">
+            <h2>Easy to navigate</h2>
+            <p>{categoryCount} categories make it simple to find browsers, messaging, media, office, developer tools, AI tools and more.</p>
+            <Link href="#apps" className="textLink">Start choosing →</Link>
+          </div>
+        </div>
+      </section>
+
+      <section className="selectorSection" id="apps">
+        <div className="container">
+          <div className="stepHeading">
+            <span className="stepNumber">1</span>
+            <div>
+              <h2>Pick the apps you want</h2>
+              <p>Search, choose a category, tick the apps you need, then continue to the installer builder.</p>
+            </div>
+          </div>
+          <AppsBrowser apps={apps} categories={categories} />
+        </div>
+      </section>
+
+      <section className="featureStrip">
+        <div className="container featureGrid">
+          <div><strong>One installer</strong><span>Combine multiple apps into a single setup flow.</span></div>
+          <div><strong>No account</strong><span>Use the app picker without creating a profile.</span></div>
+          <div><strong>Free Pro</strong><span>The Pro experience is available at no cost.</span></div>
+        </div>
+      </section>
+    </main>
+  )
+}
