@@ -35,6 +35,7 @@ model User {
   id            String         @id @default(cuid())
   name          String?
   email         String?        @unique
+  emailVerified DateTime?
   image         String?
   passwordHash  String?
   role          Role           @default(USER)
@@ -267,13 +268,13 @@ model Installer {
 }
 
 model InstallerItem {
-  installerId  String
+  installerId   String
   applicationId String
   versionId     String
-  position     Int               @default(0)
-  installer    Installer         @relation(fields: [installerId], references: [id], onDelete: Cascade)
-  application  Application       @relation(fields: [applicationId], references: [id])
-  version      ApplicationVersion @relation(fields: [versionId], references: [id])
+  position      Int                @default(0)
+  installer     Installer          @relation(fields: [installerId], references: [id], onDelete: Cascade)
+  application   Application        @relation(fields: [applicationId], references: [id])
+  version       ApplicationVersion @relation(fields: [versionId], references: [id])
 
   @@id([installerId, applicationId])
 }
