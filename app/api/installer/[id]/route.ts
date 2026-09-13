@@ -6,10 +6,10 @@ export async function GET(req:Request,{params}:{params:Promise<{id:string}>}){
  const {id}=await params
  const token=new URL(req.url).searchParams.get('token')
  if(!token)return NextResponse.json({error:'Missing installer token.'},{status:401})
- const installer=await db.installer.findUnique({where:{id},include:{items:{include:{application:true,version:true},orderBy:{position:'asc'}}}})
+ const installer=await db.installer.findUnique({where:{id},include:{items:{include:{application:{include:{publisher:true}},version:true},orderBy:{position:'asc'}}}})
  if(!installer||installer.token!==token)return NextResponse.json({error:'Installer manifest not found.'},{status:404})
  if(installer.expiresAt.getTime()<Date.now())return NextResponse.json({error:'Installer manifest expired.'},{status:410})
- const items=installer.items.map(item=>({position:item.position,appId:item.applicationId,name:item.application.name,publisher:item.application.publisherId,version:item.version.version,architecture:item.version.architecture,platform:item.version.platform,downloadUrl:item.version.downloadUrl,sha256:item.version.checksum,signature:item.version.signature,verified:item.version.verified}))
+ const items=installer.items.map(item=>({position:item.position,appId:item.applicationId,name:item.application.name,publisher:item.application.publisher.name,version:item.version.version,architecture:item.version.architecture,platform:item.version.platform,downloadUrl:item.version.downloadUrl,sha256:item.version.checksum,signature:item.version.signature,verified:item.version.verified}))
  const config={schemaVersion:1,product:'AppNest',installerId:installer.id,expiresAt:installer.expiresAt.toISOString(),items}
  const payload=JSON.stringify(config)
  const configHash=createHash('sha256').update(payload).digest('hex')
