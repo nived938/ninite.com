@@ -1,34 +1,159 @@
 'use client'
-import {useMemo,useState} from 'react'
+
+import { useMemo, useState } from 'react'
 import Link from 'next/link'
 
-type App={id:string;slug:string;name:string;description:string;license:string;portable:boolean;websiteUrl:string;sourceUrl?:string|null;iconUrl?:string|null;publisher:{name:string};versions:{version:string}[];categories:{category:{name:string}}[]}
-
-function iconFor(a:App){
- if(a.iconUrl)return a.iconUrl
- try{return new URL('/favicon.ico',a.websiteUrl).toString()}catch{return ''}
+type App = {
+  id: string
+  slug: string
+  name: string
+  description: string
+  license: string
+  portable: boolean
+  websiteUrl: string
+  sourceUrl?: string | null
+  iconUrl?: string | null
+  publisher: { name: string }
+  versions: { version: string }[]
+  categories: { category: { name: string } }[]
 }
 
-export default function AppsBrowser({apps,categories}:{apps:App[];categories:{id:string;name:string;slug:string}[]}){
- const [query,setQuery]=useState(''); const [cat,setCat]=useState(''); const [selected,setSelected]=useState<string[]>([])
- const shown=useMemo(()=>apps.filter(a=>(!cat||a.categories.some(c=>c.category.name===cat))&&(!query||`${a.name} ${a.description} ${a.publisher.name}`.toLowerCase().includes(query.toLowerCase()))),[apps,cat,query])
- const toggle=(id:string)=>setSelected(s=>s.includes(id)?s.filter(x=>x!==id):[...s,id])
- return <>
-  <div className="directory">
-   <aside className="sidebar"><strong>Categories</strong><button onClick={()=>setCat('')}>All apps</button>{categories.map(c=><button key={c.id} onClick={()=>setCat(c.name)}>{c.name}</button>)}</aside>
-   <div>
-    <div className="search" style={{marginBottom:16,maxWidth:'none'}}><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search by app, publisher or description..."/></div>
-    <div className="list">
-     {shown.map(a=><div className="listrow" key={a.id}>
-      <input className="checkbox" type="checkbox" checked={selected.includes(a.id)} onChange={()=>toggle(a.id)}/>
-      <div className="icon appIcon">{iconFor(a)?<img src={iconFor(a)} alt="" width={38} height={38}/>:a.name.slice(0,1)}</div>
-      <div style={{minWidth:0,flex:1}}><Link href={'/apps/'+a.slug}><strong>{a.name}</strong></Link><div className="muted" style={{fontSize:13}}>{a.description}</div><div className="meta">{a.publisher.name} · {a.versions[0]?.version??'Official release'} · {a.license.replace('_',' ')}</div></div>
-      <div style={{display:'flex',gap:8,flexWrap:'wrap'}}><a className="btn ghost" href={a.sourceUrl??a.websiteUrl} target="_blank" rel="noreferrer">Official download</a><Link className="btn secondary" href={'/apps/'+a.slug}>Details</Link></div>
-     </div>)}
-     {!shown.length&&<div className="empty"><strong>No applications match.</strong><p>Try another search or choose All apps.</p></div>}
-    </div>
-   </div>
-  </div>
-  {selected.length>0&&<div className="stickySelection"><div className="selected"><strong>{selected.length} applications selected</strong><br/><small>Ready to review and build an installer</small></div><Link className="btn primary" href={'/builder?apps='+selected.join(',')}>Create Installer</Link><button className="btn ghost" onClick={()=>setSelected([])}>Clear</button></div>}
- </>
+type Category = { id: string; name: string; slug: string }
+
+function iconFor(app: App) {
+  if (app.iconUrl) return app.iconUrl
+  try {
+    return new URL('/favicon.ico', app.websiteUrl).toString()
+  } catch {
+    return ''
+  }
+}
+
+export default function AppsBrowser({ apps, categories }: { apps: App[]; categories: Category[] }) {
+  const [query, setQuery] = useState('')
+  const [category, setCategory] = useState('')
+  const [selected, setSelected] = useState<string[]>([])
+
+  const categoryCounts = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const app of apps) {
+      for (const item of app.categories) {
+        counts.set(item.category.name, (counts.get(item.category.name) ?? 0) + 1)
+      }
+    }
+    return counts
+  }, [apps])
+
+  const visibleCategories = useMemo(
+    () => categories.filter(item => (categoryCounts.get(item.name) ?? 0) > 0),
+    [categories, categoryCounts]
+  )
+
+  const shown = useMemo(() => {
+    const normalized = query.trim().toLowerCase()
+    return apps.filter(app => {
+      const matchesCategory = !category || app.categories.some(item => item.category.name === category)
+      const haystack = `${app.name} ${app.description} ${app.publisher.name}`.toLowerCase()
+      return matchesCategory && (!normalized || haystack.includes(normalized))
+    })
+  }, [apps, category, query])
+
+  const toggle = (id: string) => {
+    setSelected(current => current.includes(id) ? current.filter(item => item !== id) : [...current, id])
+  }
+
+  const clearFilters = () => {
+    setQuery('')
+    setCategory('')
+  }
+
+  return (
+    <>
+      <div className="catalogToolbar">
+        <div className="catalogSearch search">
+          <span aria-hidden="true">⌕</span>
+          <input
+            value={query}
+            onChange={event => setQuery(event.target.value)}
+            placeholder="Search apps, publishers, or what you need..."
+            aria-label="Search applications"
+          />
+          {query && <button className="searchClear" onClick={() => setQuery('')} aria-label="Clear search">×</button>}
+        </div>
+        <div className="catalogSummary">
+          <strong>{shown.length}</strong> apps
+          {category && <><span>·</span><button className="filterReset" onClick={() => setCategory('')}>{category} ×</button></>}
+        </div>
+      </div>
+
+      <div className="categoryStrip" aria-label="Software categories">
+        <button className={category === '' ? 'categoryChip active' : 'categoryChip'} onClick={() => setCategory('')}>
+          <span>All apps</span><b>{apps.length}</b>
+        </button>
+        {visibleCategories.map(item => (
+          <button
+            key={item.id}
+            className={category === item.name ? 'categoryChip active' : 'categoryChip'}
+            onClick={() => setCategory(category === item.name ? '' : item.name)}
+          >
+            <span>{item.name}</span><b>{categoryCounts.get(item.name)}</b>
+          </button>
+        ))}
+      </div>
+
+      {selected.length > 0 && (
+        <div className="selectionBar">
+          <div>
+            <strong>{selected.length} selected</strong>
+            <span>Build one installer for your selection</span>
+          </div>
+          <div className="selectionActions">
+            <button className="btn ghost" onClick={() => setSelected([])}>Clear</button>
+            <Link className="btn primary" href={`/builder?apps=${selected.join(',')}`}>Continue to builder</Link>
+          </div>
+        </div>
+      )}
+
+      {shown.length > 0 ? (
+        <div className="appGrid">
+          {shown.map(app => {
+            const icon = iconFor(app)
+            const selectedApp = selected.includes(app.id)
+            return (
+              <article className={selectedApp ? 'appTile selected' : 'appTile'} key={app.id}>
+                <div className="appTileTop">
+                  <label className="selectApp" title={selectedApp ? 'Remove from installer' : 'Add to installer'}>
+                    <input type="checkbox" checked={selectedApp} onChange={() => toggle(app.id)} />
+                    <span>{selectedApp ? '✓' : '+'}</span>
+                  </label>
+                  <div className="appIconLarge">
+                    {icon ? <img src={icon} alt="" width={52} height={52} /> : app.name.slice(0, 1)}
+                  </div>
+                  <span className="licensePill">{app.license.replace('_', ' ')}</span>
+                </div>
+
+                <Link href={`/apps/${app.slug}`} className="appTileBody">
+                  <h3>{app.name}</h3>
+                  <p>{app.description}</p>
+                  <div className="appMeta"><span>{app.publisher.name}</span><span>{app.versions[0]?.version ?? 'Release info pending'}</span></div>
+                </Link>
+
+                <div className="appTileFooter">
+                  <Link href={`/apps/${app.slug}`} className="textLink">View details →</Link>
+                  <a className="officialLink" href={app.sourceUrl ?? app.websiteUrl} target="_blank" rel="noreferrer">Official site ↗</a>
+                </div>
+              </article>
+            )
+          })}
+        </div>
+      ) : (
+        <div className="empty catalogEmpty">
+          <div className="emptyIcon">⌕</div>
+          <h3>No applications match your filters</h3>
+          <p>Try a different search or browse all AppNest software.</p>
+          <button className="btn secondary" onClick={clearFilters}>Show all apps</button>
+        </div>
+      )}
+    </>
+  )
 }
